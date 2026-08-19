@@ -1,0 +1,36 @@
+# Keep the build context small and, more importantly, keep host-built native
+# binaries out of the image: `COPY frontend frontend` would otherwise carry a
+# darwin-arm64 esbuild into a linux container and break `vite build`.
+node_modules/
+**/node_modules/
+
+# built in-image, never copied in
+frontend/dist/
+synthdefs/
+*.scsyndef
+
+# git + docs + local tooling
+.git/
+.gitignore
+.dockerignore
+README.md
+TODO.md
+*.md
+
+# renders, logs, databases
+*.wav
+*.aiff
+*.flac
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# env — secrets come from Railway's environment, never from the image
+.env
+.env.*
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/

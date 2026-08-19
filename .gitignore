@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# build output
+frontend/dist/
+
+# compiled synthdefs — built from audio/synthdefs.scd at image build time.
+# If the headless sclang compile ever proves unreliable on a base-image bump,
+# the documented fallback is to compile locally and commit these; un-ignore
+# then, deliberately.
+synthdefs/
+*.scsyndef
+
+# NRT renders and lap audio
+*.wav
+*.aiff
+*.flac
+
+# lap logs
+*.sqlite
+*.sqlite3
+*.db
+
+# HLS scratch, if HLS_DIR is ever pointed inside the repo
+hls/
+
+# env
+.env
+.env.*
+!.env.example
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# logs
+*.log
+npm-debug.log*

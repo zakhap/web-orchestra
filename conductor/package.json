@@ -1,0 +1,15 @@
+{
+  "name": "orchestra-conductor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "osc": "^2.4.5",
+    "ws": "^8.18.0"
+  }
+}

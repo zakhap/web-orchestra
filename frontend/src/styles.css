@@ -1,0 +1,169 @@
+/* The hall before the lights come up. The color in this interface comes from
+   the voices themselves — hue is pitch class — so the palette is literally
+   whatever chord is currently sounding. */
+
+:root {
+  --hall: #0d1017;
+  --hall-lifted: #141926;
+  --ink: #c9cedb;
+  --ink-dim: #6b7284;
+  --hairline: #232a3a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #161c2c 0%, var(--hall) 55%);
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+.stage {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-height: 100vh;
+}
+
+/* masthead ---------------------------------------------------------------- */
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+}
+.mast-line { flex: 0 0 24px; height: 1px; background: var(--hairline); }
+.mast-text { flex: 1; }
+.mast-conn { text-transform: lowercase; }
+.mast-conn--open { color: #7fbf8e; }
+.mast-conn--connecting { color: var(--ink-dim); }
+.mast-conn--closed { color: #bf7f7f; }
+
+/* arrival ----------------------------------------------------------------- */
+.arrival-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(34px, 7vw, 54px);
+  line-height: 1.05;
+  margin: 0 0 10px;
+  color: #e8ebf2;
+}
+.arrival-title--waiting { color: var(--ink-dim); }
+.arrival-number { font-weight: 600; }
+.arrival-sub { margin: 0; color: var(--ink-dim); max-width: 46ch; }
+
+/* the ladder -------------------------------------------------------------- */
+.ladder {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+  border-left: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  background:
+    repeating-linear-gradient(
+      to top,
+      transparent 0,
+      transparent calc(100% / 12 - 1px),
+      #1a2030 calc(100% / 12 - 1px),
+      #1a2030 calc(100% / 12)
+    );
+}
+
+.rung {
+  position: absolute;
+  left: 0;
+  right: 12%;
+  height: 2px;
+  background: var(--rung-color);
+  opacity: var(--rung-glow);
+  box-shadow: 0 0 14px 1px var(--rung-color);
+  transition: bottom 1.2s ease, opacity 0.6s ease;
+  animation: materialize 3s ease both;
+}
+.rung--mine {
+  height: 3px;
+  right: 4%;
+  opacity: 1;
+  box-shadow: 0 0 22px 3px var(--rung-color);
+}
+.rung-label {
+  position: absolute;
+  right: -4px;
+  top: -1.4em;
+  transform: translateX(100%);
+  color: var(--ink-dim);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.rung--mine .rung-label { color: var(--ink); }
+
+@keyframes materialize {
+  from { opacity: 0; transform: scaleX(0.2); transform-origin: left; }
+}
+
+.ladder-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+/* console ----------------------------------------------------------------- */
+.console {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 20px;
+}
+
+.listen {
+  font: inherit;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--hall-lifted);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+.listen:hover { border-color: var(--ink-dim); }
+.listen:focus-visible,
+.knob input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.listening-note { color: var(--ink-dim); }
+
+.knob {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 220px;
+}
+.knob-name { color: var(--ink-dim); letter-spacing: 0.06em; }
+.knob input { width: 100%; }
+.knob input:disabled { opacity: 0.35; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rung { animation: none; transition: none; }
+}
+
+/* audio troubles, said quietly — the hall doesn't panic */
+.audio-note {
+  color: #bf9f7f;
+  letter-spacing: 0.02em;
+}
