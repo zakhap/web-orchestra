@@ -27,11 +27,11 @@ RUN cd frontend && npm run build
 # audio: synthdefs compiled into the image
 COPY audio audio
 ENV SC_SYNTHDEF_PATH=/app/synthdefs
-RUN mkdir -p /app/synthdefs \
-    && (QT_QPA_PLATFORM=offscreen HOME=/tmp sclang /app/audio/synthdefs.scd \
-        || echo "sclang build-time compile failed; start.sh will retry at runtime") \
-    && echo "--- /app/synthdefs after compile ---" \
-    && ls -la /app/synthdefs
+ENV QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
+# No `|| true` here on purpose. An image whose synthdefs failed to compile
+# produces a perfectly healthy, perfectly silent stream — the hardest failure
+# to diagnose from the outside. Better to never ship it.
+RUN bash /app/audio/compile-synthdefs.sh
 
 COPY conductor/server.js conductor/
 

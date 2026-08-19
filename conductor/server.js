@@ -35,6 +35,12 @@ const BOOT_GRACE_MS = parseInt(process.env.BOOT_GRACE_MS || "30000", 10);
 // ---------------------------------------------------------------- OSC layer
 
 let scReady = false;
+// scsynth answers failed commands with /fail. Ignoring those is how an image
+// with no compiled synthdefs ships a flawless, fully-connected, silent stream:
+// every /s_new fails, nothing upstream notices. Track them.
+let scFailCount = 0;
+let scLastFail = null;
+let synthDefsMissing = false;
 const udp = new osc.UDPPort({
   localAddress: "0.0.0.0",
   localPort: 0,
@@ -66,6 +72,15 @@ udp.on("message", (msg) => {
     scReady = true;
     console.log("[osc] scsynth is up");
     spawnAnchors();
+  }
+  if (msg.address === "/fail") {
+    const detail = (msg.args || []).map((a) => a.value).join(" ");
+    scFailCount++;
+    scLastFail = detail;
+    // A missing SynthDef is unrecoverable and silent; a missing node is
+    // usually just a benign race against a voice that already left.
+    if (/SynthDef not found/i.test(detail)) synthDefsMissing = true;
+    console.log("[osc] scsynth /fail:", detail);
   }
 });
 udp.on("error", (e) => console.log("[osc] error:", e.message));
@@ -185,7 +200,8 @@ function jackStatus() {
 app.get("/healthz", (_req, res) => {
   const stream = streamHealth();
   const jack = jackStatus();
-  const ok = scReady && stream.fresh && jack === "connected";
+  const ok =
+    scReady && stream.fresh && jack === "connected" && !synthDefsMissing;
   // Green during the boot window so a slow cold start does not look like a
   // crash to the platform's healthcheck; honest after that.
   const booting = Date.now() - BOOT_AT < BOOT_GRACE_MS;
@@ -194,6 +210,8 @@ app.get("/healthz", (_req, res) => {
     booting,
     scReady,
     jack,
+    synthDefsMissing,
+    scFails: { count: scFailCount, last: scLastFail },
     stream,
     population: voices.size,
   });

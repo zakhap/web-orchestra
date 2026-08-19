@@ -58,11 +58,17 @@ log "ffin ports registered"
 
 # 3. synthdefs + scsynth ----------------------------------------------------
 # Fallback: compile synthdefs at runtime if the build step didn't produce them.
+# The image build should already guarantee these exist; this covers a volume
+# mount or a base-image bump that invalidated them.
 if ! ls "$SC_SYNTHDEF_PATH"/*.scsyndef >/dev/null 2>&1; then
-  log "no compiled synthdefs found, compiling with sclang"
-  mkdir -p "$SC_SYNTHDEF_PATH"
-  QT_QPA_PLATFORM=offscreen HOME=/tmp sclang /app/audio/synthdefs.scd || \
-    log "WARNING: sclang compile failed; scsynth will have no defs"
+  log "no compiled synthdefs found, compiling now"
+  bash /app/audio/compile-synthdefs.sh /app/audio/synthdefs.scd 2>&1 | indent
+fi
+
+if ! ls "$SC_SYNTHDEF_PATH"/*.scsyndef >/dev/null 2>&1; then
+  log "FATAL: no synthdefs. scsynth would boot with an empty instrument pool"
+  log "and stream flawless silence. Refusing to start."
+  exit 1
 fi
 log "synthdefs present:"
 ls -la "$SC_SYNTHDEF_PATH" 2>&1 | indent
