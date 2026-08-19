@@ -105,7 +105,7 @@ export default function App() {
     <main className="stage">
       <header className="masthead">
         <span className="mast-line" />
-        <span className="mast-text">the orchestra is always playing</span>
+        <span className="mast-text">the server orchestra</span>
         <span className={`mast-conn mast-conn--${conn}`}>
           {conn === "open" ? "connected" : conn}
         </span>

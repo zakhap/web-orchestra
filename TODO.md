@@ -27,6 +27,11 @@ performing on its own: it receives update messages and plays out accordingly,
 and if updates stop it continues along as a zombie on its own track. The
 conductor steers; it is not a life-support system.
 
+**D4 — The piece is called "the server orchestra".** Resolves the naming
+item in PRD §8. Applied to the page title, the masthead, and the README.
+The old line, "the orchestra is always playing", is still free to serve as a
+tagline if a subtitle slot ever wants one.
+
 **D3 — Voices are not persistent identities.** A returning listener picks a new
 voice. Optionally: remember the last voice in localStorage and offer it back at
 the join screen ("welcome back — same vibraphone?") before entering. No

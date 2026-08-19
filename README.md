@@ -1,4 +1,4 @@
-# the orchestra is always playing — walking skeleton
+# the server orchestra — walking skeleton
 
 One container, one performance. Every browser connection is a voice: joining
 spawns a sustained synth on a just-intonation ladder over a shared scsynth
