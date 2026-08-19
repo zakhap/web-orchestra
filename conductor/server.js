@@ -29,6 +29,13 @@ const JACK_STATUS_FILE = process.env.JACK_STATUS_FILE || "/tmp/jack-status";
 const MAX_VOICES = parseInt(process.env.MAX_VOICES || "48", 10);
 const MAX_PER_IP = parseInt(process.env.MAX_PER_IP || "12", 10);
 
+// Without a heartbeat, a client that dies uncleanly (sleep, dropped network,
+// killed tab) never fires 'close'. The socket sits half-open and its voice
+// sounds forever, counted in the population and impossible to release. The
+// same mechanism also keeps live connections alive through proxies that cut
+// idle sockets, so listeners are not silently ejected mid-performance.
+const HEARTBEAT_MS = parseInt(process.env.HEARTBEAT_MS || "30000", 10);
+
 const BOOT_AT = Date.now();
 const BOOT_GRACE_MS = parseInt(process.env.BOOT_GRACE_MS || "30000", 10);
 
@@ -237,8 +244,28 @@ function clientIp(req) {
   return req.socket.remoteAddress || "unknown";
 }
 
+const heartbeat = setInterval(() => {
+  for (const ws of voices.keys()) {
+    if (ws.isAlive === false) {
+      const v = voices.get(ws);
+      console.log(`[reap] voice #${v && v.joinNumber} stopped answering`);
+      ws.terminate(); // fires 'close', which releases the voice properly
+      continue;
+    }
+    ws.isAlive = false;
+    try {
+      ws.ping();
+    } catch {}
+  }
+}, HEARTBEAT_MS);
+wss.on("close", () => clearInterval(heartbeat));
+
 wss.on("connection", (ws, req) => {
   const ip = clientIp(req);
+  ws.isAlive = true;
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
 
   if (voices.size >= MAX_VOICES) {
     console.log(`[refuse] orchestra full (${voices.size}) from ${ip}`);

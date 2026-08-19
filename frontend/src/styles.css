@@ -46,6 +46,7 @@ body {
 .mast-conn--open { color: #7fbf8e; }
 .mast-conn--connecting { color: var(--ink-dim); }
 .mast-conn--closed { color: #bf7f7f; }
+.mast-conn--rejoining { color: #bf9f7f; }
 
 /* arrival ----------------------------------------------------------------- */
 .arrival-title {

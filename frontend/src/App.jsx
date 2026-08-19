@@ -24,20 +24,48 @@ export default function App() {
 
   // ---- websocket: joining IS the instrument -------------------------------
   useEffect(() => {
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws`);
-    wsRef.current = ws;
-    ws.onopen = () => setConn("open");
-    ws.onclose = () => setConn("closed");
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === "welcome") setYouAre(msg.youAre);
-      if (msg.type === "welcome" || msg.type === "state") {
-        setPopulation(msg.population);
-        setVoices(msg.voices);
-      }
+    let ws;
+    let attempt = 0;
+    let timer;
+    let unmounted = false;
+
+    // The server reaps connections that stop answering its heartbeat, so a
+    // sleeping laptop or a dropped network releases its voice instead of
+    // leaving it sounding forever. The other half of that bargain is here:
+    // when we are the one who got dropped, come back. Rejoining is a new
+    // voice by design — see D3.
+    const connect = () => {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+      wsRef.current = ws;
+      ws.onopen = () => {
+        attempt = 0;
+        setConn("open");
+      };
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "welcome") setYouAre(msg.youAre);
+        if (msg.type === "welcome" || msg.type === "state") {
+          setPopulation(msg.population);
+          setVoices(msg.voices);
+        }
+      };
+      ws.onclose = () => {
+        if (unmounted) return;
+        setConn("rejoining");
+        setYouAre(null);
+        const delay = Math.min(20000, 1000 * 2 ** attempt) + Math.random() * 500;
+        attempt += 1;
+        timer = setTimeout(connect, delay);
+      };
     };
-    return () => ws.close();
+
+    connect();
+    return () => {
+      unmounted = true;
+      clearTimeout(timer);
+      if (ws) ws.close();
+    };
   }, []);
 
   // ---- audio --------------------------------------------------------------

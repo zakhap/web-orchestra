@@ -230,7 +230,7 @@ else.
 
 PRD §2 states this as a principle. Four separate paths currently break it.
 
-### T8 — Frontend never reconnects, and nothing keeps the socket alive
+### T8 — Frontend never reconnects, and nothing keeps the socket alive — ✅ DONE
 
 `frontend/src/App.jsx:28` — `onclose` sets `"closed"` and stops. No ping/pong on
 either side, and the conductor only sends on join/leave/brightness, so a quiet
@@ -239,10 +239,14 @@ room is a silent connection that Railway's proxy will idle-timeout.
 PRD §2 names listener reconnection as the reason redeploys are safe. It isn't
 implemented.
 
-- `ws.ping()` on ~30s interval server-side, `terminate()` on missed pong.
-- Client reconnect with backoff + jitter.
-- See T12 for whether a reconnect within a grace window reattaches the same
-  voice.
+- ~~`ws.ping()` on ~30s interval server-side, `terminate()` on missed pong.~~
+  Done (`HEARTBEAT_MS`). Reaping runs the normal leave path, so a reaped voice
+  gate-releases musically rather than vanishing. Verified: a client with a
+  paused socket (what a sleeping laptop looks like) is reaped; a healthy client
+  survives indefinitely.
+- ~~Client reconnect with backoff + jitter.~~ Done; masthead shows "rejoining".
+- **Still open:** T12 — whether a reconnect inside a grace window reattaches
+  the same voice, or always yields a new one (currently always new, per D3).
 
 ### T9 — Missing HLS files return `200 text/html` — ✅ DONE
 
@@ -279,6 +283,22 @@ ladder, counted in population, silent, un-releasable.
 
 Queue pending spawns until `scReady`, or just replay the whole voice table on
 the up-transition (same mechanism as T10).
+
+### T27 — Join serial and pitch slot are the same number
+
+`joinCounter` is monotonic and never reused, so a listener is "the Nth person
+ever to arrive" — the right semantics for identity, and what lap logging will
+want. But `freqForJoin(joinNumber - 1)` derives *pitch* from that same serial,
+and the ladder has only 15 distinct positions before it wraps.
+
+So №2 and №17 land on an identical frequency, hue, and rung — possible at a
+population of two. Identity and pitch slot are different allocations: the
+serial should keep counting forever while the slot comes from a free pool
+chosen to spread the currently-sounding set.
+
+M2 replaces pitch assignment with cell positions, but the distinction survives:
+voice id (permanent, monotonic) versus what the voice is currently playing
+(allocated, reused). Worth separating when the voice table is re-keyed in T6.
 
 ### T12 — Reconnect grace window *(open question)*
 
