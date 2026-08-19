@@ -146,15 +146,17 @@ makes the *normal* case, not an edge case.
 Agents outlive sockets and mostly have none. Key by voice id; the voice owns an
 optional `attachedSocket`; keep a socket→voiceId secondary index.
 
-### T7 — Timestamps in the state protocol
+### T7 — Timestamps in the state protocol — ⚠️ PARTLY DONE
 
 `stateSnapshot()` (`conductor/server.js:109`) emits no timestamp and no audio
 clock reference. PRD §3.5 requires state timestamped against the audio timeline
 so the visualization syncs to what the listener is *hearing*; PRD §2 makes the
 timestamped state contract the hedge that keeps the transport swappable.
 
-Add both fields to the v0 contract now, even unused. Versioning a live protocol
-later is the expensive version of this.
+Done: snapshots now carry `t` (server wall clock) and `seq`. **Still open:**
+`t` is wall clock, not the audio timeline — the visualization cannot yet sync
+to what the listener is *hearing*. Needs a mapping from HLS media time to
+conductor time.
 
 Also decide now: broadcast the **upcoming schedule** (note events with
 audio-timeline timestamps) rather than current state, so the client can
@@ -344,11 +346,18 @@ message rate limit, `ws` default `maxPayload` of 100MB feeding `JSON.parse`
   is T14, a composition decision.
 - **Still open:** server-side brightness/param throttle (~20 Hz). Folds into T16.
 
-### T16 — Broadcast coalescing
+### T16 — Broadcast coalescing — ✅ DONE
 
-`broadcast()` fires on every brightness message and re-serializes per recipient
-(`conductor/server.js:122-127`). PRD §4 already specifies ~2 Hz snapshots — this
-is a known design that's merely unimplemented. Fold into the T3 clock tick.
+Done. State now goes out on a fixed `STATE_HZ` tick (default 2 Hz) instead of
+only on events. Event-driven broadcasts still fire on join/leave for
+responsiveness; both paths increment `seq`, so every emitted snapshot is
+uniquely ordered.
+
+This also fixed an observable bug: because HLS plays over plain HTTP
+independent of the WebSocket, a client whose socket had silently died kept
+hearing new arrivals while its ladder stayed frozen. Event-only broadcasts had
+nothing to correct that; a steady tick is self-healing. Fold into the T3 clock
+when the sequencer lands.
 
 ---
 

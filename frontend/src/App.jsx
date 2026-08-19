@@ -17,6 +17,9 @@ export default function App() {
   const [brightness, setBrightness] = useState(0.5);
   const [listening, setListening] = useState(false);
   const [audioNote, setAudioNote] = useState(null);
+  const [arrivals, setArrivals] = useState([]);
+  const prevVoicesRef = useRef(null);
+  const toastIdRef = useRef(0);
   const wsRef = useRef(null);
   const audioRef = useRef(null);
   const hlsRef = useRef(null);
@@ -48,12 +51,47 @@ export default function App() {
         if (msg.type === "welcome" || msg.type === "state") {
           setPopulation(msg.population);
           setVoices(msg.voices);
+
+          // Announce who came and went. Skipped on the first snapshot after
+          // (re)connecting, so arriving into a full room does not fire a
+          // toast per person already sounding.
+          const prev = prevVoicesRef.current;
+          if (prev) {
+            const before = new Set(prev.map((v) => v.n));
+            const after = new Set(msg.voices.map((v) => v.n));
+            const events = [
+              ...msg.voices
+                .filter((v) => !before.has(v.n))
+                .map((v) => ({ kind: "in", v })),
+              ...prev
+                .filter((v) => !after.has(v.n))
+                .map((v) => ({ kind: "out", v })),
+            ];
+            if (events.length) {
+              const toasts = events.map((e2) => ({
+                id: ++toastIdRef.current,
+                hue: e2.v.hue,
+                text:
+                  e2.kind === "in"
+                    ? `voice №${e2.v.n} joined · ${e2.v.freq} Hz`
+                    : `voice №${e2.v.n} left`,
+              }));
+              setArrivals((cur) => [...cur, ...toasts].slice(-4));
+              const ids = new Set(toasts.map((t) => t.id));
+              setTimeout(
+                () => setArrivals((cur) => cur.filter((t) => !ids.has(t.id))),
+                5000
+              );
+            }
+          }
+          prevVoicesRef.current = msg.voices;
         }
       };
       ws.onclose = () => {
         if (unmounted) return;
         setConn("rejoining");
         setYouAre(null);
+        prevVoicesRef.current = null; // resync silently, don't toast the room
         const delay = Math.min(20000, 1000 * 2 ** attempt) + Math.random() * 500;
         attempt += 1;
         timer = setTimeout(connect, delay);
@@ -160,6 +198,18 @@ export default function App() {
           person who is here right now
         </p>
       </section>
+
+      <div className="arrivals" aria-live="polite">
+        {arrivals.map((t) => (
+          <span
+            key={t.id}
+            className="arrival-toast"
+            style={{ "--toast-color": `hsl(${t.hue} 70% 62%)` }}
+          >
+            {t.text}
+          </span>
+        ))}
+      </div>
 
       {/* signature: the harmonic ladder. vertical position = pitch,
           hue = pitch class. the interface's color is the harmony. */}

@@ -139,9 +139,17 @@ function spawnAnchors() {
 // ws -> voice record
 const voices = new Map();
 
+let stateSeq = 0;
+
 function stateSnapshot() {
   return {
     type: "state",
+    // Timestamped so the visualization can eventually sync to the audio
+    // timeline rather than to wall clock (PRD 3.5). Unused by the client
+    // today; adding the field now is free, versioning a live protocol later
+    // is not.
+    t: Date.now(),
+    seq: stateSeq,
     population: voices.size,
     voices: [...voices.values()].map((v) => ({
       n: v.joinNumber,
@@ -153,11 +161,25 @@ function stateSnapshot() {
 }
 
 function broadcast() {
+  stateSeq++; // every emitted snapshot is uniquely ordered, tick or event
   const payload = JSON.stringify(stateSnapshot());
   for (const ws of voices.keys()) {
     if (ws.readyState === ws.OPEN) ws.send(payload);
   }
 }
+
+// State goes out on a fixed tick rather than only on events. Event-driven
+// broadcasts mean one dropped message leaves a client stale forever with
+// nothing to correct it — which looks like "the audio knows someone joined
+// but my screen doesn't," since HLS keeps playing over plain HTTP whether or
+// not the WebSocket is healthy. A steady tick is self-healing, coalesces
+// brightness spam into one message per frame, and is where the orchestration
+// clock will eventually live.
+const STATE_HZ = parseInt(process.env.STATE_HZ || "2", 10);
+setInterval(() => {
+  if (voices.size === 0) return;
+  broadcast();
+}, Math.round(1000 / STATE_HZ));
 
 // ------------------------------------------------------------------ HTTP/WS
 
