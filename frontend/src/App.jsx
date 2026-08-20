@@ -201,7 +201,10 @@ export default function App() {
         )}
         <p className="arrival-sub">
           {voices.length} voice{voices.length === 1 ? "" : "s"} in the ensemble
-          {population > 0 && ` · ${population} of them ${population === 1 ? "is" : "are"} a person here right now`}
+          {population > 0 &&
+            (population === 1
+              ? " · one of them is a person here right now"
+              : ` · ${population} of them are people here right now`)}
           {lap && ` · lap ${lap.lap}`}
         </p>
       </section>
