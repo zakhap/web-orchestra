@@ -1,0 +1,651 @@
+{
+  "id": "demo-v1",
+  "title": "harmonic drift",
+  "note": "Partials of one fundamental. The limit rises and falls; the key never moves.",
+  "pulse": {
+    "bpm": 108,
+    "subdivision": 2
+  },
+  "tuning": {
+    "kind": "harmonic-series",
+    "fundamental_hz": 55.0,
+    "comment": "pitch_hz = fundamental_hz * partial. Any subset is consonant."
+  },
+  "phases": [
+    {
+      "id": "A",
+      "name": "home",
+      "partials": [
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        12,
+        15,
+        16,
+        18,
+        20
+      ],
+      "note": "5-limit. Pure thirds and fifths, familiar and open."
+    },
+    {
+      "id": "B",
+      "name": "septimal",
+      "partials": [
+        7,
+        14,
+        21
+      ],
+      "note": "The 7th harmonic enters: 31 cents under a tempered flat 7th."
+    },
+    {
+      "id": "C",
+      "name": "alien",
+      "partials": [
+        11,
+        13,
+        22
+      ],
+      "note": "11 and 13 \u2014 neutral intervals with no keyboard equivalent."
+    },
+    {
+      "id": "D",
+      "name": "return",
+      "partials": [],
+      "note": "Sheds 13, then 11, then 7. Rejoins phase A at the seam."
+    }
+  ],
+  "cells": [
+    {
+      "n": 1,
+      "phase": "A",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 3.5
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "phase": "A",
+      "beats": 2,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 0.5
+        },
+        {
+          "partial": 9,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 8,
+          "at": 1,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "phase": "A",
+      "beats": 3,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 0.5
+        },
+        {
+          "partial": 9,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 9,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 8,
+          "at": 2,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "phase": "A",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 12,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 9,
+          "at": 2,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 3,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "phase": "A",
+      "beats": 2,
+      "events": [
+        {
+          "partial": 6,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 1,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "phase": "A",
+      "beats": 6,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 12,
+          "at": 2,
+          "dur": 2
+        },
+        {
+          "partial": 10,
+          "at": 4,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 5,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "phase": "B",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 0.5
+        },
+        {
+          "partial": 9,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 14,
+          "at": 1.5,
+          "dur": 2.5
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "phase": "B",
+      "beats": 2,
+      "events": [
+        {
+          "partial": 14,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 12,
+          "at": 1,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "phase": "B",
+      "beats": 3,
+      "events": [
+        {
+          "partial": 7,
+          "at": 0,
+          "dur": 1.5
+        },
+        {
+          "partial": 8,
+          "at": 1.5,
+          "dur": 1.5
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "phase": "B",
+      "beats": 6,
+      "events": [
+        {
+          "partial": 12,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 14,
+          "at": 1,
+          "dur": 2
+        },
+        {
+          "partial": 16,
+          "at": 3,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "phase": "B",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 14,
+          "at": 0,
+          "dur": 4
+        }
+      ]
+    },
+    {
+      "n": 12,
+      "phase": "B",
+      "beats": 8,
+      "events": [
+        {
+          "partial": 10,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 12,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 14,
+          "at": 2,
+          "dur": 2
+        },
+        {
+          "partial": 12,
+          "at": 4,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 5,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 6,
+          "dur": 2
+        }
+      ]
+    },
+    {
+      "n": 13,
+      "phase": "C",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 11,
+          "at": 0,
+          "dur": 4
+        }
+      ]
+    },
+    {
+      "n": 14,
+      "phase": "C",
+      "beats": 3,
+      "events": [
+        {
+          "partial": 10,
+          "at": 0,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
+          "at": 0.5,
+          "dur": 1
+        },
+        {
+          "partial": 12,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
+          "at": 2,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 15,
+      "phase": "C",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 11,
+          "at": 0,
+          "dur": 2
+        },
+        {
+          "partial": 13,
+          "at": 2,
+          "dur": 2
+        }
+      ]
+    },
+    {
+      "n": 16,
+      "phase": "C",
+      "beats": 8,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 2
+        },
+        {
+          "partial": 11,
+          "at": 2,
+          "dur": 2
+        },
+        {
+          "partial": 13,
+          "at": 4,
+          "dur": 2
+        },
+        {
+          "partial": 16,
+          "at": 6,
+          "dur": 2
+        }
+      ]
+    },
+    {
+      "n": 17,
+      "phase": "C",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 13,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 12,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 11,
+          "at": 2,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 3,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 18,
+      "phase": "C",
+      "beats": 2,
+      "events": [
+        {
+          "partial": 22,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 11,
+          "at": 1,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 19,
+      "phase": "D",
+      "beats": 3,
+      "events": [
+        {
+          "partial": 11,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 9,
+          "at": 2,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 20,
+      "phase": "D",
+      "beats": 6,
+      "events": [
+        {
+          "partial": 14,
+          "at": 0,
+          "dur": 2
+        },
+        {
+          "partial": 12,
+          "at": 2,
+          "dur": 2
+        },
+        {
+          "partial": 10,
+          "at": 4,
+          "dur": 2
+        }
+      ]
+    },
+    {
+      "n": 21,
+      "phase": "D",
+      "beats": 3,
+      "events": [
+        {
+          "partial": 10,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 9,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 2,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 22,
+      "phase": "D",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 12,
+          "at": 0,
+          "dur": 1
+        },
+        {
+          "partial": 10,
+          "at": 1,
+          "dur": 1
+        },
+        {
+          "partial": 8,
+          "at": 2,
+          "dur": 2
+        }
+      ]
+    },
+    {
+      "n": 23,
+      "phase": "D",
+      "beats": 2,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 0.5
+        },
+        {
+          "partial": 9,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 8,
+          "at": 1,
+          "dur": 1
+        }
+      ]
+    },
+    {
+      "n": 24,
+      "phase": "D",
+      "beats": 4,
+      "events": [
+        {
+          "partial": 8,
+          "at": 0,
+          "dur": 3.5
+        }
+      ]
+    }
+  ],
+  "arc": {
+    "dynamics": [
+      [
+        0.0,
+        0.72
+      ],
+      [
+        0.25,
+        0.88
+      ],
+      [
+        0.5,
+        1.0
+      ],
+      [
+        0.72,
+        0.94
+      ],
+      [
+        0.9,
+        0.78
+      ],
+      [
+        1.0,
+        0.72
+      ]
+    ]
+  },
+  "tiers": [
+    {
+      "name": "chamber",
+      "upto": 8,
+      "dwell_beats": [
+        12,
+        28
+      ],
+      "voice_amp": 0.34
+    },
+    {
+      "name": "ensemble",
+      "upto": 24,
+      "dwell_beats": [
+        20,
+        44
+      ],
+      "voice_amp": 0.22
+    },
+    {
+      "name": "orchestra",
+      "upto": 60,
+      "dwell_beats": [
+        28,
+        60
+      ],
+      "voice_amp": 0.14
+    },
+    {
+      "name": "mass",
+      "upto": 999,
+      "dwell_beats": [
+        36,
+        76
+      ],
+      "voice_amp": 0.09
+    }
+  ]
+}
