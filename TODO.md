@@ -27,6 +27,14 @@ performing on its own: it receives update messages and plays out accordingly,
 and if updates stop it continues along as a zombie on its own track. The
 conductor steers; it is not a life-support system.
 
+**D5 — The visual lag is the design, not a defect.** State updates arriving
+ahead of the audio is accepted; listeners are expected to see things in a
+delayed fashion. Precise audio-timeline mapping (HLS media time → conductor
+time) is therefore NOT required. If the split ever grates, the cheap fix is a
+fixed delay buffer on the client — hold each snapshot ~8s before rendering —
+not a media-time mapping. Downgrades the open half of [[T7]] from correctness
+to taste.
+
 **D4 — The piece is called "the server orchestra".** Resolves the naming
 item in PRD §8. Applied to the page title, the masthead, and the README.
 The old line, "the orchestra is always playing", is still free to serve as a
@@ -452,7 +460,6 @@ Logged so nobody "fixes" them:
 - T27 is moot: pitch now comes from the cell an agent is repeating, not from
   its join serial, so the two allocations are already separate.
 
-**Still open from the P0 set:** T7's second half — snapshot `t` is wall clock,
-not the audio timeline, so the ring shows *now* while the listener hears ~8s
-ago. Needs a mapping from HLS media time to conductor time. Most visible in
-the ring visualization, which is currently ahead of the music.
+**T7's second half is deliberately not being done** — see D5. The ring runs
+ahead of the audio and that is accepted. The escape hatch, if it ever grates,
+is a fixed client-side delay buffer, not a media-time mapping.
