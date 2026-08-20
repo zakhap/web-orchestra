@@ -36,6 +36,25 @@ the harmonic series and back — the fundamental never moves, but the harmonic
 Cells 23 and 24 restate cells 2 and 1. That joint is the **seam**, composed
 first so the ring closes.
 
+## Cell lengths are material, not packaging
+
+Lengths come from **{3, 4, 5, 7}** — pairwise coprime except 4 — so cells of
+different lengths cycle against each other for 420 beats (≈3.9 min) before
+everything realigns. The first draft used {2,3,4,6,8}, which shares small
+factors and resets every 24 beats; phase relationships collapsed in 13 seconds
+and the texture went flat.
+
+Two things must both hold for phasing to happen:
+
+1. **coprime lengths** (above), and
+2. **staggered entry** — voices enter on a seeded beat offset. Without this
+   every agent starts its cell on the same beat and voices sharing a cell play
+   in exact unison, which throws the coprime lengths away. The offset a voice
+   enters on is the offset it keeps.
+
+Voices that do land on the same offset still do not phase-lock: per-voice
+detune and the fixed 0–15 ms offset turn coincidence into chorus.
+
 ## Rendering
 
 ```bash

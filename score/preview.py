@@ -126,8 +126,13 @@ def main():
     agents = []
     for i in range(a.voices):
         born_frac = 0.0 if i < 2 else (i / a.voices) * 0.72
-        agents.append(Agent(rng, i, n_cells, patience_beats=a.patience,
-                            born_beat=born_frac * total_beats))
+        ag = Agent(rng, i, n_cells, patience_beats=a.patience,
+                   born_beat=born_frac * total_beats)
+        # Enter on a staggered beat, or voices sharing a cell play in unison
+        # and the coprime cell lengths buy nothing.
+        ag.born_beat += float(rng.integers(0, 7))
+        ag.next_decision = ag.born_beat
+        agents.append(ag)
 
     # --- the drone and the pulse: present from before anyone arrives --------
     t = np.arange(total) / SR

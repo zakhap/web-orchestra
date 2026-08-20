@@ -84,7 +84,11 @@ class Sequencer {
     // and takes a whole lap to resolve — audible as one voice playing
     // unrelated material underneath everyone else.
     ag.pos = Math.max(0, this.leader() - 1);
-    ag.nextBeat = Math.ceil(this.nowBeat()) + 1;
+    // Stagger the entry. Without this every agent starts its cell on the same
+    // beat and voices sharing a cell play in exact unison — which throws away
+    // the whole point of cells having coprime lengths. The offset a voice
+    // enters on is the offset it keeps, so this is what seeds the phasing.
+    ag.nextBeat = Math.ceil(this.nowBeat()) + 1 + ag.rng.int(0, 6);
     ag.nextDecision = ag.nextBeat;
     this.agents.push(ag);
     return ag;
