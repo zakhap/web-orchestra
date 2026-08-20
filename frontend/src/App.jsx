@@ -14,6 +14,8 @@ export default function App() {
   const [youAre, setYouAre] = useState(null);
   const [population, setPopulation] = useState(0);
   const [voices, setVoices] = useState([]);
+  const [scoreMeta, setScoreMeta] = useState(null);
+  const [lap, setLap] = useState(null);
   const [brightness, setBrightness] = useState(0.5);
   const [listening, setListening] = useState(false);
   const [audioNote, setAudioNote] = useState(null);
@@ -47,24 +49,28 @@ export default function App() {
       };
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-        if (msg.type === "welcome") setYouAre(msg.youAre);
+        if (msg.type === "welcome") {
+          setYouAre(msg.youAre);
+          if (msg.score) setScoreMeta(msg.score);
+        }
         if (msg.type === "welcome" || msg.type === "state") {
           setPopulation(msg.population);
           setVoices(msg.voices);
+          if (msg.lap) setLap(msg.lap);
 
           // Announce who came and went. Skipped on the first snapshot after
           // (re)connecting, so arriving into a full room does not fire a
           // toast per person already sounding.
           const prev = prevVoicesRef.current;
           if (prev) {
-            const before = new Set(prev.map((v) => v.n));
-            const after = new Set(msg.voices.map((v) => v.n));
+            const before = new Set(prev.map((v) => v.id));
+            const after = new Set(msg.voices.map((v) => v.id));
             const events = [
               ...msg.voices
-                .filter((v) => !before.has(v.n))
+                .filter((v) => !before.has(v.id))
                 .map((v) => ({ kind: "in", v })),
               ...prev
-                .filter((v) => !after.has(v.n))
+                .filter((v) => !after.has(v.id))
                 .map((v) => ({ kind: "out", v })),
             ];
             if (events.length) {
@@ -73,8 +79,8 @@ export default function App() {
                 hue: e2.v.hue,
                 text:
                   e2.kind === "in"
-                    ? `voice №${e2.v.n} joined · ${e2.v.freq} Hz`
-                    : `voice №${e2.v.n} left`,
+                    ? `a voice joined at cell ${e2.v.cell}`
+                    : `a voice left the ensemble`,
               }));
               setArrivals((cur) => [...cur, ...toasts].slice(-4));
               const ids = new Set(toasts.map((t) => t.id));
@@ -165,7 +171,7 @@ export default function App() {
     }
   }, []);
 
-  const me = voices.find((v) => v.n === youAre);
+  const me = voices.find((v) => v.id === youAre);
 
   return (
     <main className="stage">
@@ -184,18 +190,19 @@ export default function App() {
           </h1>
         ) : (
           <h1 className="arrival-title">
-            you are voice{" "}
+            you are playing{" "}
             <span
               className="arrival-number"
               style={me ? { color: `hsl(${me.hue} 75% 65%)` } : undefined}
             >
-              №{youAre}
+              cell {me ? me.cell : "…"}
             </span>
           </h1>
         )}
         <p className="arrival-sub">
-          {population} voice{population === 1 ? "" : "s"} sounding — each one a
-          person who is here right now
+          {voices.length} voice{voices.length === 1 ? "" : "s"} in the ensemble
+          {population > 0 && ` · ${population} of them ${population === 1 ? "is" : "are"} a person here right now`}
+          {lap && ` · lap ${lap.lap}`}
         </p>
       </section>
 
@@ -211,31 +218,48 @@ export default function App() {
         ))}
       </div>
 
-      {/* signature: the harmonic ladder. vertical position = pitch,
-          hue = pitch class. the interface's color is the harmony. */}
-      <section className="ladder" aria-label="voices by pitch">
-        {voices.map((v) => {
-          const mine = v.n === youAre;
+      {/* the ring. every voice sits on the cell it is repeating; the pack
+          is the bright arc, and the seam is the joint it flows across. */}
+      <section className="ring" aria-label="the ring of cells">
+        {Array.from({ length: scoreMeta ? scoreMeta.cells : 24 }, (_, i) => {
+          const cellNo = i + 1;
+          const here = voices.filter((v) => v.cell === cellNo);
+          const phase = scoreMeta ? scoreMeta.cellPhases[i] : "A";
+          const mine = me && me.cell === cellNo;
           return (
             <div
-              key={v.n}
-              className={`rung ${mine ? "rung--mine" : ""}`}
-              style={{
-                bottom: `${pitchPos(v.freq) * 100}%`,
-                "--rung-color": `hsl(${v.hue} 75% ${mine ? 70 : 55}%)`,
-                "--rung-glow": 0.35 + v.brightness * 0.65,
-              }}
+              key={cellNo}
+              className={`cell cell--${phase} ${here.length ? "cell--live" : ""} ${
+                mine ? "cell--mine" : ""
+              } ${i === 0 ? "cell--seam" : ""}`}
+              title={`cell ${cellNo} · phase ${phase}`}
             >
-              <span className="rung-label">
-                №{v.n} · {v.freq} Hz
+              <span className="cell-no">{cellNo}</span>
+              <span className="cell-voices">
+                {here.map((v) => (
+                  <span
+                    key={v.id}
+                    className={`vdot ${v.human ? "vdot--human" : ""} ${
+                      v.id === youAre ? "vdot--mine" : ""
+                    }`}
+                    style={{ background: `hsl(${v.hue} 72% 62%)` }}
+                  />
+                ))}
               </span>
             </div>
           );
         })}
-        {voices.length === 0 && (
-          <p className="ladder-empty">the anchors are holding the room</p>
-        )}
       </section>
+
+      {lap && scoreMeta && (
+        <p className="phase-note">
+          phase <strong>{lap.phase}</strong>
+          {(() => {
+            const ph = scoreMeta.phases.find((p) => p.id === lap.phase);
+            return ph ? ` — ${ph.name}. ${ph.note}` : "";
+          })()}
+        </p>
+      )}
 
       <section className="console">
         {!listening ? (

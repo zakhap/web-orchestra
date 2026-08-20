@@ -44,7 +44,7 @@ server-side identity, no accounts. Open sub-question in T12.
 Structural seams. All are small today and all get expensive once the sequencer
 and agent sim are built on top of them.
 
-### T1 — Seeded randomness everywhere *(the one that prompted this doc)*
+### T1 — Seeded randomness everywhere — ✅ DONE
 
 PRD §5 requires one seed to govern all randomness, so score v13 can be rendered
 against identical agent behavior as v12, and so any logged lap can be
@@ -69,7 +69,7 @@ Work:
   decides on its own must also derive from conductor-supplied seeds, or zombie
   passages are unreproducible and the A/B render is a lie.
 
-### T2 — OSC sink becomes an interface
+### T2 — OSC sink becomes an interface — ✅ DONE
 
 `conductor/server.js:35` — `send()` closes over the module-level `udp` and a
 global `scReady`. M3's NRT path needs the same conductor to emit an OSC *file*
@@ -78,7 +78,7 @@ instead of UDP datagrams.
 Split into `RealtimeSink` / `NrtFileSink` / `DryRunSink` behind one interface,
 injected at startup. One call site today; forty once the sequencer lands.
 
-### T3 — Clock is injectable from the first line of the sequencer
+### T3 — Clock is injectable from the first line of the sequencer — ✅ DONE
 
 There is no clock yet, which is the good news — this is still greenfield.
 
@@ -136,7 +136,7 @@ conductor-supplied seed. Reproducible in NRT by construction, which `RandID`
 never would be, and it sidesteps 64 RNGs not covering a 60+ voice tier.
 If any RNG use survives, raise scsynth's `-r` above the population ceiling.
 
-### T6 — Re-key the voice table
+### T6 — Re-key the voice table — ✅ DONE
 
 `conductor/server.js:107` is `Map<WebSocket, voice>` (`voices.set(ws, …)` at
 :171). PRD §2: every voice is driven by an agent, humans attach to and override
@@ -286,7 +286,7 @@ ladder, counted in population, silent, un-releasable.
 Queue pending spawns until `scReady`, or just replay the whole voice table on
 the up-transition (same mechanism as T10).
 
-### T27 — Join serial and pitch slot are the same number
+### T27 — Join serial and pitch slot are the same number — ✅ MOOT
 
 `joinCounter` is monotonic and never reused, so a listener is "the Nth person
 ever to arrive" — the right semantics for identity, and what lap logging will
@@ -317,7 +317,7 @@ blips musically invisible. Decide alongside T8; the two ship together.
 
 ## P2 — Audio integrity at scale
 
-### T13 — Master limiter and group structure
+### T13 — Master limiter and group structure — ✅ DONE
 
 Nothing exists downstream of the voices. Everything is `addToHead` of group 0
 (`conductor/server.js:102-103,176`), summing into `Out.ar(0)`. Sixty voices at
@@ -431,3 +431,28 @@ Logged so nobody "fixes" them:
   to 1000 Hz). Placeholder pitch material; M1/M2 replace it.
 - `hueForFreq` (`conductor/server.js:91`) is **correct** and matches PRD §3.5
   exactly. Keep it.
+
+
+---
+
+## M2 landed — what the conductor now is
+
+`rng.js` seeded PRNG (the only entropy in the process) · `score.js` loader ·
+`sequencer.js` clock + agents + ring · `server.js` transport only.
+
+- Agents perform whether or not anyone is listening (D1): `CORE_AGENTS`
+  default 5. A listener **attaches** to a new agent rather than replacing one,
+  and their departure is performed — the voice finishes its repetition,
+  decrescendos, and goes.
+- Notes go out as OSC bundles with time tags a lookahead ahead of now, so the
+  pulse does not inherit Node's timer jitter. That matters because the score's
+  0-15ms per-voice offsets are meant to read as humanity, not slop.
+- Groups: voices in group 1 at the head, `\master` limiter in group 2 at the
+  tail. This is what let the anchors be raised to an audible level (T13).
+- T27 is moot: pitch now comes from the cell an agent is repeating, not from
+  its join serial, so the two allocations are already separate.
+
+**Still open from the P0 set:** T7's second half — snapshot `t` is wall clock,
+not the audio timeline, so the ring shows *now* while the listener hears ~8s
+ago. Needs a mapping from HLS media time to conductor time. Most visible in
+the ring visualization, which is currently ahead of the music.

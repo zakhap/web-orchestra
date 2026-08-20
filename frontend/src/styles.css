@@ -189,3 +189,62 @@ body {
   75%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* the ring ---------------------------------------------------------------- */
+.ring {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
+  gap: 3px;
+}
+.cell {
+  position: relative;
+  min-height: 62px;
+  border-radius: 3px;
+  border: 1px solid var(--hairline);
+  background: var(--hall-lifted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 2px;
+  transition: background 400ms ease, border-color 400ms ease;
+}
+/* phase is the room's colour: the harmonic limit rising and falling */
+.cell--A { background: #121a26; }
+.cell--B { background: #1b1a1c; }
+.cell--C { background: #1e1526; }
+.cell--D { background: #121e20; }
+.cell--live { border-color: #3a4358; }
+.cell--mine { border-color: #7a6ea8; }
+.cell--seam { border-left: 2px solid #4a4360; }
+.cell-no {
+  font-size: 9px;
+  color: var(--ink-dim);
+  letter-spacing: 0;
+}
+.cell-voices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.vdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0.75;
+}
+.vdot--human { opacity: 1; box-shadow: 0 0 6px currentColor; }
+.vdot--mine {
+  width: 8px;
+  height: 8px;
+  outline: 1px solid #e8ebf2;
+  outline-offset: 1px;
+}
+.phase-note {
+  margin: -16px 0 0;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.phase-note strong { color: var(--ink); font-weight: 400; }

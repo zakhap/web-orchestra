@@ -33,7 +33,12 @@ ENV QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
 # to diagnose from the outside. Better to never ship it.
 RUN bash /app/audio/compile-synthdefs.sh
 
-COPY conductor/server.js conductor/
+# the composition is data, loaded at boot
+COPY score score
+
+# conductor sources last: they change most often, so the heavy layers above
+# stay cached
+COPY conductor/*.js conductor/
 
 ENV PORT=8080
 EXPOSE 8080

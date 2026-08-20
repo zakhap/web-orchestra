@@ -1,13 +1,12 @@
-// conductor/server.js
+// conductor/server.js — transport.
 //
-// The single brain of the prototype:
-//   - talks OSC (UDP) to scsynth on localhost
-//   - serves the built React frontend and the HLS stream over one HTTP port
-//   - one WebSocket per listener; each connection = one voice in the orchestra
+// Owns the sockets and the process, not the music. The score lives in
+// score/*.json, the performance lives in sequencer.js, randomness lives in
+// rng.js. This file wires them to scsynth, to browsers, and to HTTP.
 //
-// Degrades gracefully: if scsynth isn't reachable (e.g. local frontend dev
-// without SuperCollider), it still assigns voice numbers and broadcasts state,
-// and just logs the OSC it would have sent.
+// Degrades gracefully: with no scsynth reachable the orchestra still runs,
+// agents still advance, state still broadcasts — the notes just go nowhere.
+// That is the local frontend-dev mode.
 
 const path = require("path");
 const fs = require("fs");
@@ -16,38 +15,35 @@ const express = require("express");
 const { WebSocketServer } = require("ws");
 const osc = require("osc");
 
+const { makeRng } = require("./rng");
+const { loadScore } = require("./score");
+const { Sequencer, VOICE_GROUP } = require("./sequencer");
+
 const PORT = process.env.PORT || 8080;
 const HLS_DIR = process.env.HLS_DIR || "/tmp/hls";
 const SC_HOST = process.env.SC_HOST || "127.0.0.1";
 const SC_PORT = parseInt(process.env.SC_PORT || "57110", 10);
 const DIST_DIR = path.join(__dirname, "..", "frontend", "dist");
-// start.sh writes "connected"/"disconnected" here after proving the JACK graph.
 const JACK_STATUS_FILE = process.env.JACK_STATUS_FILE || "/tmp/jack-status";
 
-// Generous caps: insurance against a public URL, not an artistic statement.
-// The real soft cap / chorus-doubling threshold is a composition decision.
 const MAX_VOICES = parseInt(process.env.MAX_VOICES || "48", 10);
 const MAX_PER_IP = parseInt(process.env.MAX_PER_IP || "12", 10);
-
-// Without a heartbeat, a client that dies uncleanly (sleep, dropped network,
-// killed tab) never fires 'close'. The socket sits half-open and its voice
-// sounds forever, counted in the population and impossible to release. The
-// same mechanism also keeps live connections alive through proxies that cut
-// idle sockets, so listeners are not silently ejected mid-performance.
 const HEARTBEAT_MS = parseInt(process.env.HEARTBEAT_MS || "30000", 10);
+const STATE_HZ = parseInt(process.env.STATE_HZ || "2", 10);
+const BOOT_GRACE_MS = parseInt(process.env.BOOT_GRACE_MS || "30000", 10);
+const CORE_AGENTS = parseInt(process.env.CORE_AGENTS || "5", 10);
+const SEED = parseInt(process.env.SEED || "22", 10);
 
 const BOOT_AT = Date.now();
-const BOOT_GRACE_MS = parseInt(process.env.BOOT_GRACE_MS || "30000", 10);
 
 // ---------------------------------------------------------------- OSC layer
 
 let scReady = false;
-// scsynth answers failed commands with /fail. Ignoring those is how an image
-// with no compiled synthdefs ships a flawless, fully-connected, silent stream:
-// every /s_new fails, nothing upstream notices. Track them.
 let scFailCount = 0;
 let scLastFail = null;
 let synthDefsMissing = false;
+let dryRunNotes = 0;
+
 const udp = new osc.UDPPort({
   localAddress: "0.0.0.0",
   localPort: 0,
@@ -56,44 +52,52 @@ const udp = new osc.UDPPort({
   metadata: true,
 });
 
-function send(address, ...args) {
-  const msg = {
-    address,
-    args: args.map((v) =>
-      typeof v === "number"
-        ? Number.isInteger(v)
-          ? { type: "i", value: v }
-          : { type: "f", value: v }
-        : { type: "s", value: v }
-    ),
-  };
-  if (scReady) {
-    udp.send(msg);
-  } else {
-    console.log(`[osc:dry-run] ${address} ${args.join(" ")}`);
-  }
-}
+const oscArgs = (args) =>
+  args.map((v) =>
+    typeof v === "number"
+      ? Number.isInteger(v)
+        ? { type: "i", value: v }
+        : { type: "f", value: v }
+      : { type: "s", value: v }
+  );
+
+// The sequencer only ever talks to this object, so the same performance can
+// be pointed at a live server or at an OSC file for offline rendering (T2).
+const sink = {
+  msg(address, ...args) {
+    if (!scReady) return console.log(`[osc:dry-run] ${address} ${args.join(" ")}`);
+    udp.send({ address, args: oscArgs(args) });
+  },
+  // Notes are sent as bundles with time tags a short lookahead ahead of now.
+  // scsynth honours those sample-accurately, so the pulse does not inherit
+  // Node's timer jitter — which matters because the score's 0-15ms per-voice
+  // offsets are supposed to read as humanity, not as slop.
+  bundle(dtSeconds, messages) {
+    if (!scReady) return void dryRunNotes++;
+    udp.send({
+      timeTag: osc.timeTag(Math.max(0, dtSeconds)),
+      packets: messages.map((m) => ({ address: m[0], args: oscArgs(m.slice(1)) })),
+    });
+  },
+};
 
 udp.on("message", (msg) => {
   if (msg.address === "/status.reply" && !scReady) {
     scReady = true;
     console.log("[osc] scsynth is up");
-    spawnAnchors();
+    setupOrchestra();
   }
   if (msg.address === "/fail") {
     const detail = (msg.args || []).map((a) => a.value).join(" ");
     scFailCount++;
     scLastFail = detail;
-    // A missing SynthDef is unrecoverable and silent; a missing node is
-    // usually just a benign race against a voice that already left.
     if (/SynthDef not found/i.test(detail)) synthDefsMissing = true;
-    console.log("[osc] scsynth /fail:", detail);
+    if (scFailCount < 20) console.log("[osc] scsynth /fail:", detail);
   }
 });
 udp.on("error", (e) => console.log("[osc] error:", e.message));
 udp.open();
 
-// Ping scsynth until it answers. If it never does, we stay in dry-run mode.
 udp.on("ready", () => {
   const ping = setInterval(() => {
     if (scReady) return clearInterval(ping);
@@ -105,77 +109,66 @@ udp.on("ready", () => {
 
 // ------------------------------------------------------------ the orchestra
 
-// Node id allocation: 1000s for permanent fixtures, 2000+ for listener voices.
+const MASTER_GROUP = 2;
+const MASTER_NODE = 1000;
 const ANCHOR_NODE = 1001;
 const PULSE_NODE = 1002;
-let nextNode = 2000;
-let joinCounter = 0;
 
-// Just-intonation ladder over a low fundamental. Any subset of these
-// frequencies is consonant, so the orchestra sounds intentional at any
-// population. Voice n climbs the ladder and wraps through octaves.
-const BASE = 110;
-const RATIOS = [1, 9 / 8, 5 / 4, 3 / 2, 5 / 3];
-function freqForJoin(n) {
-  const step = RATIOS[n % RATIOS.length];
-  const octave = 1 + (Math.floor(n / RATIOS.length) % 3);
-  return BASE * step * octave;
-}
-function hueForFreq(freq) {
-  // pitch class -> hue: the UI's color literally is the harmony
-  return Math.round(((Math.log2(freq) % 1) + 1) % 1 * 360);
-}
-function cutoffFor(brightness) {
-  // 0..1 -> ~250..6000 Hz, exponential
-  return 250 * Math.pow(24, Math.min(1, Math.max(0, brightness)));
+const score = loadScore(process.env.SCORE_PATH);
+const rng = makeRng(SEED);
+const clock = { nowSeconds: () => Date.now() / 1000 };
+const seq = new Sequencer({
+  score,
+  rng,
+  sink,
+  clock,
+  core: CORE_AGENTS,
+  log: console.log,
+});
+
+function setupOrchestra() {
+  // Node order is the whole point: voices in a head group, the master
+  // limiter in a tail group so it sees the summed orchestra. Without that
+  // ceiling the piece has no dynamic range — the anchors must stay
+  // inaudibly quiet so that a crowd does not clip.
+  sink.msg("/g_new", VOICE_GROUP, 0, 0);
+  sink.msg("/g_new", MASTER_GROUP, 1, 0);
+  sink.msg("/s_new", "master", MASTER_NODE, 1, MASTER_GROUP, "amp", 1.0);
+  sink.msg("/s_new", "anchor", ANCHOR_NODE, 0, VOICE_GROUP, "freq",
+           score.tuning.fundamental_hz, "amp", 0.22);
+  sink.msg("/s_new", "pulse", PULSE_NODE, 0, VOICE_GROUP,
+           "freq", score.tuning.fundamental_hz * 16,
+           "tempo", (score.pulse.bpm / 60) * score.pulse.subdivision,
+           "amp", 0.09);
+  console.log("[orchestra] groups, master limiter, anchors up");
 }
 
-function spawnAnchors() {
-  // The stream is never silent: a low drone and the pulse, from boot, forever.
-  send("/s_new", "anchor", ANCHOR_NODE, 0, 0, "freq", 55, "amp", 0.09);
-  send("/s_new", "pulse", PULSE_NODE, 0, 0, "freq", 880, "tempo", 1.8, "amp", 0.045);
-}
+seq.start();
+setInterval(() => seq.tick(), 60);
 
-// ws -> voice record
+// ws -> listener record
 const voices = new Map();
 
 let stateSeq = 0;
-
 function stateSnapshot() {
   return {
     type: "state",
-    // Timestamped so the visualization can eventually sync to the audio
-    // timeline rather than to wall clock (PRD 3.5). Unused by the client
-    // today; adding the field now is free, versioning a live protocol later
-    // is not.
     t: Date.now(),
     seq: stateSeq,
     population: voices.size,
-    voices: [...voices.values()].map((v) => ({
-      n: v.joinNumber,
-      freq: Math.round(v.freq * 10) / 10,
-      brightness: v.brightness,
-      hue: v.hue,
-    })),
+    lap: seq.lapInfo(),
+    voices: seq.snapshot(),
   };
 }
 
 function broadcast() {
-  stateSeq++; // every emitted snapshot is uniquely ordered, tick or event
+  stateSeq++;
   const payload = JSON.stringify(stateSnapshot());
   for (const ws of voices.keys()) {
     if (ws.readyState === ws.OPEN) ws.send(payload);
   }
 }
 
-// State goes out on a fixed tick rather than only on events. Event-driven
-// broadcasts mean one dropped message leaves a client stale forever with
-// nothing to correct it — which looks like "the audio knows someone joined
-// but my screen doesn't," since HLS keeps playing over plain HTTP whether or
-// not the WebSocket is healthy. A steady tick is self-healing, coalesces
-// brightness spam into one message per frame, and is where the orchestration
-// clock will eventually live.
-const STATE_HZ = parseInt(process.env.STATE_HZ || "2", 10);
 setInterval(() => {
   if (voices.size === 0) return;
   broadcast();
@@ -185,7 +178,6 @@ setInterval(() => {
 
 const app = express();
 
-// HLS: playlist must never be cached; segments are immutable.
 app.use(
   "/stream",
   express.static(HLS_DIR, {
@@ -200,10 +192,6 @@ app.use(
   })
 );
 
-// Is audio actually leaving the building? A fresh playlist means jackd and
-// ffmpeg are alive and clocking. It does NOT mean there is sound in it — the
-// JACK input device encodes zeros when nothing is connected, which is why
-// start.sh proves the graph separately and records the verdict.
 function streamHealth() {
   try {
     const st = fs.statSync(path.join(HLS_DIR, "live.m3u8"));
@@ -229,10 +217,7 @@ function jackStatus() {
 app.get("/healthz", (_req, res) => {
   const stream = streamHealth();
   const jack = jackStatus();
-  const ok =
-    scReady && stream.fresh && jack === "connected" && !synthDefsMissing;
-  // Green during the boot window so a slow cold start does not look like a
-  // crash to the platform's healthcheck; honest after that.
+  const ok = scReady && stream.fresh && jack === "connected" && !synthDefsMissing;
   const booting = Date.now() - BOOT_AT < BOOT_GRACE_MS;
   res.status(ok || booting ? 200 : 503).json({
     ok,
@@ -243,16 +228,13 @@ app.get("/healthz", (_req, res) => {
     scFails: { count: scFailCount, last: scLastFail },
     stream,
     population: voices.size,
+    orchestra: { agents: seq.agents.length, ...seq.lapInfo(), dryRunNotes },
   });
 });
 
-// Anything missing under /stream is a real 404, never the SPA shell. hls.js
-// treats an HTML body where a playlist should be as a fatal, non-retried parse
-// error, so serving index.html here turns "the stream isn't up yet" into "this
-// listener's player is permanently dead until they reload."
-app.use("/stream", (_req, res) =>
-  res.status(404).type("text/plain").send("not found")
-);
+// A miss under /stream is a real 404, never the SPA shell: hls.js treats an
+// HTML body where a playlist should be as a fatal, non-retried parse error.
+app.use("/stream", (_req, res) => res.status(404).type("text/plain").send("not found"));
 
 app.use(express.static(DIST_DIR));
 app.get("*", (_req, res) => res.sendFile(path.join(DIST_DIR, "index.html")));
@@ -260,18 +242,12 @@ app.get("*", (_req, res) => res.sendFile(path.join(DIST_DIR, "index.html")));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 4096 });
 
-function clientIp(req) {
-  const fwd = req.headers["x-forwarded-for"];
-  if (typeof fwd === "string" && fwd.length) return fwd.split(",")[0].trim();
-  return req.socket.remoteAddress || "unknown";
-}
-
 const heartbeat = setInterval(() => {
   for (const ws of voices.keys()) {
     if (ws.isAlive === false) {
       const v = voices.get(ws);
-      console.log(`[reap] voice #${v && v.joinNumber} stopped answering`);
-      ws.terminate(); // fires 'close', which releases the voice properly
+      console.log(`[reap] listener ${v && v.joinNumber} stopped answering`);
+      ws.terminate();
       continue;
     }
     ws.isAlive = false;
@@ -281,6 +257,14 @@ const heartbeat = setInterval(() => {
   }
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeat));
+
+function clientIp(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.length) return fwd.split(",")[0].trim();
+  return req.socket.remoteAddress || "unknown";
+}
+
+let joinCounter = 0;
 
 wss.on("connection", (ws, req) => {
   const ip = clientIp(req);
@@ -296,38 +280,32 @@ wss.on("connection", (ws, req) => {
   let fromThisIp = 0;
   for (const v of voices.values()) if (v.ip === ip) fromThisIp++;
   if (fromThisIp >= MAX_PER_IP) {
-    console.log(`[refuse] ${MAX_PER_IP} voices already from ${ip}`);
+    console.log(`[refuse] ${MAX_PER_IP} listeners already from ${ip}`);
     return ws.close(1013, "too many voices from one place");
   }
 
+  // A listener does not replace an agent, they attach to one. The ensemble
+  // was already playing before they arrived and keeps playing after.
+  const agent = seq.addAgent(true);
   const joinNumber = ++joinCounter;
-  const nodeId = nextNode++;
-  const freq = freqForJoin(joinNumber - 1);
-  const voice = {
-    joinNumber,
-    nodeId,
-    freq,
-    brightness: 0.5,
-    hue: hueForFreq(freq),
-    pan: Math.random() * 1.6 - 0.8,
-    seed: Math.floor(Math.random() * 1e6),
-    ip, // for the per-IP cap only; stateSnapshot never exposes it
-  };
-  voices.set(ws, voice);
+  voices.set(ws, { joinNumber, agentId: agent.id, agent, ip });
+  console.log(`[join] listener #${joinNumber} -> agent ${agent.id} at cell ${(agent.pos % score.nCells) + 1}`);
 
-  console.log(
-    `[join] voice #${joinNumber} node ${nodeId} freq ${freq.toFixed(1)}`
+  // Static score shape goes out once, not on every tick.
+  ws.send(
+    JSON.stringify({
+      ...stateSnapshot(),
+      type: "welcome",
+      youAre: agent.id,
+      score: {
+        id: score.id,
+        title: score.title,
+        cells: score.nCells,
+        cellPhases: score.cells.map((c) => c.phase),
+        phases: score.phases.map((p) => ({ id: p.id, name: p.name, note: p.note })),
+      },
+    })
   );
-  send(
-    "/s_new", "voice", nodeId, 0, 0,
-    "freq", freq,
-    "amp", 0.13,
-    "cutoff", cutoffFor(voice.brightness),
-    "pan", voice.pan,
-    "seed", voice.seed
-  );
-
-  ws.send(JSON.stringify({ ...stateSnapshot(), type: "welcome", youAre: joinNumber }));
   broadcast();
 
   ws.on("message", (raw) => {
@@ -338,28 +316,26 @@ wss.on("connection", (ws, req) => {
       return;
     }
     if (msg.type === "brightness" && typeof msg.value === "number") {
-      voice.brightness = Math.min(1, Math.max(0, msg.value));
-      send("/n_set", voice.nodeId, "cutoff", cutoffFor(voice.brightness));
-      broadcast();
+      agent.bright = Math.min(1, Math.max(0, msg.value));
     }
   });
 
   ws.on("close", () => {
     voices.delete(ws);
-    console.log(`[leave] voice #${voice.joinNumber}`);
-    // gate release: the envelope's 10s tail lets the voice dissolve
-    send("/n_set", voice.nodeId, "gate", 0);
+    console.log(`[leave] listener #${joinNumber}`);
+    seq.releaseAgent(agent); // finishes its repetition, decrescendos, goes
     broadcast();
   });
 });
 
 process.on("SIGTERM", () => {
-  console.log("[shutdown] releasing all voices");
-  for (const v of voices.values()) send("/n_set", v.nodeId, "gate", 0);
+  console.log("[shutdown]");
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 2000);
 });
 
 server.listen(PORT, () =>
-  console.log(`[http] conductor listening on :${PORT}`)
+  console.log(
+    `[http] conductor on :${PORT} · score "${score.id}" · ${score.nCells} cells · seed ${SEED}`
+  )
 );
