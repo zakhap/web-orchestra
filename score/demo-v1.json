@@ -11,6 +11,20 @@
     "fundamental_hz": 55.0,
     "comment": "pitch_hz = fundamental_hz * partial. Any subset is consonant."
   },
+  "instruments": [
+    {
+      "id": "tone",
+      "name": "mallet",
+      "weight": 3,
+      "note": "struck, decays \u2014 carries the fast upper-partial figuration"
+    },
+    {
+      "id": "bowed",
+      "name": "bowed",
+      "weight": 2,
+      "note": "swells and sustains \u2014 holds the long tones in cells 1, 11, 13"
+    }
+  ],
   "phases": [
     {
       "id": "A",
@@ -228,17 +242,32 @@
         {
           "partial": 9,
           "at": 0.5,
-          "dur": 0.5
+          "dur": 0.25
         },
         {
           "partial": 10,
+          "at": 0.75,
+          "dur": 0.25
+        },
+        {
+          "partial": 14,
           "at": 1,
+          "dur": 0.75
+        },
+        {
+          "partial": 14,
+          "at": 2,
+          "dur": 0.5
+        },
+        {
+          "partial": 12,
+          "at": 2.5,
           "dur": 0.5
         },
         {
           "partial": 14,
-          "at": 1.5,
-          "dur": 3.5
+          "at": 3,
+          "dur": 2
         }
       ]
     },
@@ -250,15 +279,30 @@
         {
           "partial": 14,
           "at": 0,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 12,
-          "at": 1,
-          "dur": 1
+          "at": 0.5,
+          "dur": 0.25
         },
         {
           "partial": 14,
+          "at": 0.75,
+          "dur": 0.25
+        },
+        {
+          "partial": 16,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 14,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 12,
           "at": 2,
           "dur": 1
         }
@@ -299,12 +343,32 @@
         {
           "partial": 12,
           "at": 0,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 14,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 16,
           "at": 1,
-          "dur": 2
+          "dur": 0.25
+        },
+        {
+          "partial": 14,
+          "at": 1.25,
+          "dur": 0.25
+        },
+        {
+          "partial": 12,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 14,
+          "at": 2,
+          "dur": 1
         },
         {
           "partial": 16,
@@ -333,25 +397,50 @@
         {
           "partial": 10,
           "at": 0,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 12,
+          "at": 0.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 14,
           "at": 1,
+          "dur": 0.25
+        },
+        {
+          "partial": 16,
+          "at": 1.25,
+          "dur": 0.25
+        },
+        {
+          "partial": 14,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 12,
+          "at": 2,
           "dur": 1
         },
         {
           "partial": 14,
-          "at": 2,
-          "dur": 2
+          "at": 3,
+          "dur": 0.5
         },
         {
           "partial": 12,
+          "at": 3.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 10,
           "at": 4,
           "dur": 1
         },
         {
-          "partial": 10,
+          "partial": 8,
           "at": 5,
           "dur": 2
         }
@@ -377,15 +466,30 @@
         {
           "partial": 10,
           "at": 0,
-          "dur": 0.5
+          "dur": 0.25
         },
         {
           "partial": 11,
-          "at": 0.5,
-          "dur": 1
+          "at": 0.25,
+          "dur": 0.25
         },
         {
           "partial": 12,
+          "at": 0.5,
+          "dur": 0.25
+        },
+        {
+          "partial": 13,
+          "at": 0.75,
+          "dur": 0.25
+        },
+        {
+          "partial": 11,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 13,
           "at": 1.5,
           "dur": 0.5
         },
@@ -404,15 +508,40 @@
         {
           "partial": 11,
           "at": 0,
-          "dur": 2
+          "dur": 1
+        },
+        {
+          "partial": 13,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
+          "at": 1.5,
+          "dur": 0.5
         },
         {
           "partial": 13,
           "at": 2,
-          "dur": 2
+          "dur": 0.25
+        },
+        {
+          "partial": 14,
+          "at": 2.25,
+          "dur": 0.25
+        },
+        {
+          "partial": 13,
+          "at": 2.5,
+          "dur": 0.5
         },
         {
           "partial": 11,
+          "at": 3,
+          "dur": 1
+        },
+        {
+          "partial": 13,
           "at": 4,
           "dur": 1.5
         },
@@ -453,20 +582,40 @@
         {
           "partial": 13,
           "at": 0,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 12,
-          "at": 1,
-          "dur": 1
+          "at": 0.5,
+          "dur": 0.25
         },
         {
           "partial": 11,
+          "at": 0.75,
+          "dur": 0.25
+        },
+        {
+          "partial": 13,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 12,
           "at": 2,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 10,
+          "at": 2.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
           "at": 3,
           "dur": 1
         }
@@ -480,15 +629,30 @@
         {
           "partial": 22,
           "at": 0,
-          "dur": 1
+          "dur": 0.5
         },
         {
           "partial": 11,
-          "at": 1,
-          "dur": 1
+          "at": 0.5,
+          "dur": 0.25
         },
         {
           "partial": 13,
+          "at": 0.75,
+          "dur": 0.25
+        },
+        {
+          "partial": 22,
+          "at": 1,
+          "dur": 0.5
+        },
+        {
+          "partial": 13,
+          "at": 1.5,
+          "dur": 0.5
+        },
+        {
+          "partial": 11,
           "at": 2,
           "dur": 1
         }

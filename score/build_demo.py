@@ -29,6 +29,16 @@ FUNDAMENTAL = 55.0          # A1
 BPM = 108                   # quarter note
 SUBDIVISION = 2             # the pulse ticks eighths
 
+# The instrument pool. Agents draw one at spawn and keep it. Weights bias the
+# ensemble toward mallets, with bowed voices as the sustaining minority that
+# hold the long tones the struck instrument cannot.
+INSTRUMENTS = [
+    dict(id="tone",  name="mallet", weight=3,
+         note="struck, decays — carries the fast upper-partial figuration"),
+    dict(id="bowed", name="bowed",  weight=2,
+         note="swells and sustains — holds the long tones in cells 1, 11, 13"),
+]
+
 PHASES = [
     dict(id="A", name="home",     partials=[4,5,6,8,9,10,12,15,16,18,20],
          note="5-limit. Pure thirds and fifths, familiar and open."),
@@ -58,19 +68,24 @@ CELLS = [
     (5,  "A", 7, [(6,0,1.5),(8,1.5,1.5),(9,3,1),(10,4,1),(8,5,2)]),
     (6,  "A", 5, [(8,0,1),(10,1,1),(12,2,1.5),(10,3.5,1.5)]),
     # ---- B: the seventh arrives --------------------------------------------
-    (7,  "B", 5, [(8,0,.5),(9,.5,.5),(10,1,.5),(14,1.5,3.5)]),
-    (8,  "B", 3, [(14,0,1),(12,1,1),(14,2,1)]),
+    # From here the upper partials start subdividing. Rhythmic density tracks
+    # the harmonic limit: as the harmony gets stranger the surface gets busier,
+    # while the low partials stay spacious and hold the floor.
+    (7,  "B", 5, [(8,0,.5),(9,.5,.25),(10,.75,.25),(14,1,.75),(14,2,.5),(12,2.5,.5),(14,3,2)]),
+    (8,  "B", 3, [(14,0,.5),(12,.5,.25),(14,.75,.25),(16,1,.5),(14,1.5,.5),(12,2,1)]),
     (9,  "B", 7, [(7,0,2),(8,2,1.5),(7,3.5,1.5),(6,5,2)]),
-    (10, "B", 5, [(12,0,1),(14,1,2),(16,3,2)]),
+    (10, "B", 5, [(12,0,.5),(14,.5,.5),(16,1,.25),(14,1.25,.25),(12,1.5,.5),(14,2,1),(16,3,2)]),
     (11, "B", 4, [(14,0,4)]),
-    (12, "B", 7, [(10,0,1),(12,1,1),(14,2,2),(12,4,1),(10,5,2)]),
+    (12, "B", 7, [(10,0,.5),(12,.5,.5),(14,1,.25),(16,1.25,.25),(14,1.5,.5),(12,2,1),
+                  (14,3,.5),(12,3.5,.5),(10,4,1),(8,5,2)]),
     # ---- C: 11 and 13 ------------------------------------------------------
     (13, "C", 5, [(11,0,5)]),
-    (14, "C", 3, [(10,0,.5),(11,.5,1),(12,1.5,.5),(11,2,1)]),
-    (15, "C", 7, [(11,0,2),(13,2,2),(11,4,1.5),(9,5.5,1.5)]),
+    (14, "C", 3, [(10,0,.25),(11,.25,.25),(12,.5,.25),(13,.75,.25),(11,1,.5),(13,1.5,.5),(11,2,1)]),
+    (15, "C", 7, [(11,0,1),(13,1,.5),(11,1.5,.5),(13,2,.25),(14,2.25,.25),(13,2.5,.5),
+                  (11,3,1),(13,4,1.5),(9,5.5,1.5)]),
     (16, "C", 5, [(8,0,1.5),(11,1.5,1.5),(13,3,2)]),
-    (17, "C", 4, [(13,0,1),(12,1,1),(11,2,1),(10,3,1)]),
-    (18, "C", 3, [(22,0,1),(11,1,1),(13,2,1)]),
+    (17, "C", 4, [(13,0,.5),(12,.5,.25),(11,.75,.25),(13,1,.5),(11,1.5,.5),(12,2,.5),(10,2.5,.5),(11,3,1)]),
+    (18, "C", 3, [(22,0,.5),(11,.5,.25),(13,.75,.25),(22,1,.5),(13,1.5,.5),(11,2,1)]),
     # ---- D: retreat, and close the ring ------------------------------------
     (19, "D", 3, [(11,0,1),(10,1,1),(9,2,1)]),
     (20, "D", 5, [(14,0,2),(12,2,1.5),(10,3.5,1.5)]),
@@ -90,6 +105,7 @@ score = {
         "fundamental_hz": FUNDAMENTAL,
         "comment": "pitch_hz = fundamental_hz * partial. Any subset is consonant.",
     },
+    "instruments": INSTRUMENTS,
     "phases": PHASES,
     "cells": [
         {"n": n, "phase": ph, "beats": b,

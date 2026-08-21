@@ -79,8 +79,8 @@ export default function App() {
                 hue: e2.v.hue,
                 text:
                   e2.kind === "in"
-                    ? `a voice joined at cell ${e2.v.cell}`
-                    : `a voice left the ensemble`,
+                    ? `a ${e2.v.instrument || "voice"} joined at cell ${e2.v.cell}`
+                    : `a ${e2.v.instrument || "voice"} left the ensemble`,
               }));
               setArrivals((cur) => [...cur, ...toasts].slice(-4));
               const ids = new Set(toasts.map((t) => t.id));

@@ -55,6 +55,36 @@ Two things must both hold for phasing to happen:
 Voices that do land on the same offset still do not phase-lock: per-voice
 detune and the fixed 0–15 ms offset turn coincidence into chorus.
 
+## Instruments
+
+A weighted pool; an agent draws one at spawn and keeps it.
+
+| id | name | role |
+|----|------|------|
+| `tone`  | mallet | struck, decays — carries the fast upper-partial figuration |
+| `bowed` | bowed  | swells and sustains — holds the long tones in cells 1, 11, 13 |
+
+`\tone` alone was a mismatch with the score: cells 1, 11 and 13 hold a single
+pitch for four or five beats, and a percussive envelope simply decayed away
+underneath them. `\bowed` also gives the texture a counterweight — something
+singing under the figuration instead of articulating alongside it.
+
+`preview.py` implements both timbres to track `audio/synthdefs.scd`. If those
+two drift apart, offline auditioning stops predicting the stream, which
+defeats the point of rendering offline at all.
+
+## Rhythm
+
+Rhythmic density tracks the harmonic limit — as the harmony gets stranger the
+surface gets busier, then opens out on the return:
+
+| phase | notes per beat | shortest value |
+|-------|----------------|----------------|
+| A home     | 0.85 | eighth |
+| B septimal | 1.13 | sixteenth |
+| C alien    | 1.26 | sixteenth |
+| D return   | 0.67 | eighth |
+
 ## Rendering
 
 ```bash

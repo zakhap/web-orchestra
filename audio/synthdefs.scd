@@ -60,6 +60,28 @@ SynthDef(\tone, { |out = 0, freq = 440, amp = 0.2, dur = 0.5, pan = 0, bright = 
 	Out.ar(out, Pan2.ar(sig, pan));
 }).writeDefFile(outDir);
 
+// The sustaining voice. \tone is struck and decays, so the score's long tones
+// (cells 1, 11, 13 hold for four and five beats) died away to nothing under
+// it. This one swells in, holds, and releases, so a held note is actually
+// held. Also the textural counterweight: something to sing under the
+// upper-partial figuration rather than articulate alongside it.
+SynthDef(\bowed, { |out = 0, freq = 440, amp = 0.2, dur = 0.5, pan = 0, bright = 0.5|
+	var env, sig, b, cutoff, vib, d;
+	b = bright.clip(0, 1);
+	d = dur.max(0.2);
+	// gentle vibrato, slow enough to read as breath rather than effect
+	vib = SinOsc.kr(4.6, Rand(0, 6.0)) * 0.0022 + 1;
+	env = EnvGen.kr(
+		Env.new([0, 1, 1, 0], [d * 0.38, d * 0.34, d * 0.28], [2, 0, -2]),
+		doneAction: 2);
+	sig = Mix(Saw.ar(freq * vib * [0.999, 1, 1.0035], 0.3));
+	sig = sig + SinOsc.ar(freq * 0.5 * vib, 0, 0.16);   // a little body underneath
+	cutoff = (freq * (2.2 + (b * 7))).clip(140, 12000);
+	sig = RLPF.ar(sig, cutoff, 0.55);
+	sig = sig * env * amp * 0.85;
+	Out.ar(out, Pan2.ar(sig, pan));
+}).writeDefFile(outDir);
+
 // The master stage. Runs in a tail group so it sees the summed orchestra.
 // Without this the piece has no ceiling: sixty voices simply add up and clip.
 // With it, the anchors can be raised to an audible level AND a crowd survives.

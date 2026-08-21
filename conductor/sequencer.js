@@ -14,8 +14,21 @@
 
 const VOICE_GROUP = 1;
 
+// Weighted draw from the instrument pool. An agent takes one at spawn and
+// keeps it, so a voice has a consistent identity for as long as it sounds.
+function pickInstrument(rng, pool) {
+  if (!pool || !pool.length) return { id: "tone", name: "mallet" };
+  const total = pool.reduce((a, i) => a + (i.weight || 1), 0);
+  let r = rng.next() * total;
+  for (const i of pool) {
+    r -= i.weight || 1;
+    if (r <= 0) return i;
+  }
+  return pool[pool.length - 1];
+}
+
 class Agent {
-  constructor(rng, id, human) {
+  constructor(rng, id, human, pool) {
     this.id = id;
     this.human = !!human;
     this.rng = rng;
@@ -27,6 +40,10 @@ class Agent {
     this.nextDecision = 0;
 
     // Personality, rolled once from this agent's own substream.
+    const inst = pickInstrument(rng, pool);
+    this.instrument = inst.id;
+    this.instrumentName = inst.name || inst.id;
+
     this.patienceMul = rng.range(0.7, 1.45);
     this.herding = rng.next();
     this.detune = rng.gauss(0, 0.0016);   // a few cents, fixed for life
@@ -78,7 +95,7 @@ class Sequencer {
 
   addAgent(human) {
     const idx = this.nextIndex++;
-    const ag = new Agent(this.rng.fork(idx), idx, human);
+    const ag = new Agent(this.rng.fork(idx), idx, human, this.score.instruments);
     // Arrive where the ensemble actually is, not at cell 1. Starting a
     // newcomer at the beginning strands it far outside the legality window
     // and takes a whole lap to resolve — audible as one voice playing
@@ -137,7 +154,7 @@ class Sequencer {
       const dt = (startBeat + ev.at - nb) * s.secondsPerBeat + ag.offset;
       if (dt < 0) continue;
       this.sink.bundle(dt, [
-        ["/s_new", "tone", -1, 0, VOICE_GROUP,
+        ["/s_new", ag.instrument, -1, 0, VOICE_GROUP,
          "freq", s.hz(ev.partial) * (1 + ag.detune),
          "amp", amp,
          "dur", ev.dur * s.secondsPerBeat,
@@ -177,6 +194,7 @@ class Sequencer {
         human: ag.human,
         cell: (ag.pos % s.nCells) + 1,
         phase: cell.phase,
+        instrument: ag.instrumentName,
         partial,
         freq: Math.round(freq * 10) / 10,
         hue: Math.round(((((Math.log2(freq) % 1) + 1) % 1) * 360)),

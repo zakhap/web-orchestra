@@ -19,6 +19,49 @@ SR = 44100
 
 
 # ----------------------------------------------------------------- synthesis
+def _place(buf, i0, sig, pan):
+    n = len(sig)
+    if i0 + n > buf.shape[0]:
+        n = buf.shape[0] - i0
+        if n < 8:
+            return
+        sig = sig[:n]
+    l, r = np.sqrt(0.5 * (1 - pan)), np.sqrt(0.5 * (1 + pan))
+    buf[i0:i0 + n, 0] += sig * l
+    buf[i0:i0 + n, 1] += sig * r
+
+
+def render_bowed(buf, start_s, freq, dur_s, amp, pan, detune, bright=0.5):
+    """Sustaining voice: swells in, holds, releases. The struck tone decays,
+    so the score's long held notes died away under it. Must track \\bowed in
+    audio/synthdefs.scd, or an offline audition stops predicting the stream."""
+    d = max(dur_s, 0.2)
+    n = int(d * SR)
+    if n < 8:
+        return
+    t = np.arange(n) / SR
+    f = freq * (1.0 + detune)
+    vib = 1.0 + 0.0022 * np.sin(2 * np.pi * 4.6 * t)
+
+    sig = np.zeros(n)
+    for det in (0.999, 1.0, 1.0035):
+        for h in range(1, 9):
+            hf = f * det * h
+            if hf > 15000:
+                break
+            sig += (0.30 / h) * np.sin(2 * np.pi * hf * vib * t)
+    sig += 0.16 * np.sin(2 * np.pi * f * 0.5 * vib * t)
+
+    a = max(int(n * 0.38), 1)
+    hold = max(int(n * 0.34), 1)
+    rel = max(n - a - hold, 1)
+    env = np.concatenate([
+        np.linspace(0, 1, a) ** 2, np.ones(hold), np.linspace(1, 0, rel) ** 2,
+    ])
+    env = env[:n] if len(env) >= n else np.pad(env, (0, n - len(env)))
+    _place(buf, int(start_s * SR), sig * env * amp * 0.85, pan)
+
+
 def render_note(buf, start_s, freq, dur_s, amp, pan, detune):
     """Mallet-ish tone: a few partials, fast attack, exponential decay."""
     n = int(dur_s * SR)
@@ -62,6 +105,7 @@ class Agent:
         self.detune = rng.normal(0.0, 0.0016)     # a few cents, fixed per voice
         self.pan = rng.uniform(-0.75, 0.75)
         self.offset = rng.uniform(0.0, 0.015)     # 0-15ms fixed pulse offset
+        self.instrument = "tone"
         self.born_beat = born_beat
         self.next_decision = born_beat
         self.rng = rng
@@ -132,6 +176,15 @@ def main():
         # and the coprime cell lengths buy nothing.
         ag.born_beat += float(rng.integers(0, 7))
         ag.next_decision = ag.born_beat
+        # Weighted draw from the score's instrument pool, same shape as the
+        # conductor's, so an offline audition predicts the live stream.
+        pool = score.get("instruments") or [{"id": "tone", "weight": 1}]
+        r = rng.random() * sum(i.get("weight", 1) for i in pool)
+        for inst in pool:
+            r -= inst.get("weight", 1)
+            if r <= 0:
+                ag.instrument = inst["id"]
+                break
         agents.append(ag)
 
     # --- the drone and the pulse: present from before anyone arrives --------
@@ -184,9 +237,10 @@ def main():
             start = (beat + ev["at"]) * spb + ag.offset
             if start >= a.seconds:
                 break
-            render_note(buf, start, fund * ev["partial"], ev["dur"] * spb,
-                        0.30 * gain * fade / np.sqrt(max(1, len(agents))),
-                        ag.pan, ag.detune)
+            amp = 0.30 * gain * fade / np.sqrt(max(1, len(agents)))
+            renderer = render_bowed if ag.instrument == "bowed" else render_note
+            renderer(buf, start, fund * ev["partial"], ev["dur"] * spb,
+                     amp, ag.pan, ag.detune)
             events += 1
 
         nxt = beat + cell["beats"]
